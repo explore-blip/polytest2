@@ -43,11 +43,8 @@ app.get('/api/polymarket/comments/:marketId', async (req, res) => {
             console.log(`Converting slug to condition ID: ${marketId}`);
             
             try {
-                const marketResponse = await axios.get(`https://gamma-api.polymarket.com/markets`, {
-                    params: {
-                        slug: marketId,
-                        closed: false
-                    },
+                // Try fetching by slug
+                const marketResponse = await axios.get(`https://gamma-api.polymarket.com/markets/${marketId}`, {
                     headers: {
                         'Accept': 'application/json',
                         'User-Agent': 'PolymarketAnalyzer/1.0'
@@ -55,14 +52,30 @@ app.get('/api/polymarket/comments/:marketId', async (req, res) => {
                     timeout: 10000
                 });
 
-                if (marketResponse.data && marketResponse.data.length > 0) {
-                    marketId = marketResponse.data[0].conditionId;
+                if (marketResponse.data) {
+                    const market = Array.isArray(marketResponse.data) ? marketResponse.data[0] : marketResponse.data;
+                    
+                    // Check if market has comments
+                    const commentCount = market.commentCount || market.events?.[0]?.commentCount || 0;
+                    console.log(`Market comment count: ${commentCount}`);
+                    
+                    if (commentCount === 0) {
+                        return res.status(404).json({
+                            success: false,
+                            error: 'No comments available',
+                            message: 'This market has no comments yet. Try a more active market.',
+                            commentCount: 0
+                        });
+                    }
+                    
+                    marketId = market.conditionId;
                     console.log(`Resolved to condition ID: ${marketId}`);
                 } else {
                     throw new Error('Market not found');
                 }
             } catch (lookupError) {
                 console.error('Market lookup failed:', lookupError.message);
+                console.error('Full error:', lookupError.response?.data || lookupError);
                 return res.status(404).json({
                     success: false,
                     error: 'Market not found',
@@ -88,6 +101,16 @@ app.get('/api/polymarket/comments/:marketId', async (req, res) => {
 
         console.log(`Successfully fetched ${response.data.length} comments`);
 
+        if (response.data.length === 0) {
+            return res.json({
+                success: false,
+                error: 'No comments found',
+                message: 'This market exists but has no comments yet. Try a more active market with discussions.',
+                count: 0,
+                marketId: marketId
+            });
+        }
+
         res.json({
             success: true,
             data: response.data,
@@ -97,6 +120,23 @@ app.get('/api/polymarket/comments/:marketId', async (req, res) => {
 
     } catch (error) {
         console.error('Polymarket API Error:', error.message);
+        console.error('Error details:', {
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            marketId: marketId
+        });
+        
+        // Better error message for 422
+        if (error.response?.status === 422) {
+            return res.status(422).json({
+                success: false,
+                error: 'Cannot fetch comments',
+                message: 'This market may not have comments, or the market ID format is incorrect. Try browsing markets with the Browse button.',
+                marketId: marketId
+            });
+        }
+        
         res.status(error.response?.status || 500).json({
             success: false,
             error: 'Failed to fetch comments from Polymarket',
@@ -112,7 +152,7 @@ app.get('/api/polymarket/comments/:marketId', async (req, res) => {
  */
 app.get('/api/polymarket/markets', async (req, res) => {
     try {
-        const { limit = 20, offset = 0 } = req.query;
+        const { limit = 100, offset = 0 } = req.query;
 
         console.log(`Fetching markets list (limit: ${limit})`);
 
@@ -130,12 +170,18 @@ app.get('/api/polymarket/markets', async (req, res) => {
             timeout: 10000
         });
 
-        console.log(`Successfully fetched ${response.data.length} markets`);
+        // Filter to only markets with comments
+        const marketsWithComments = response.data.filter(market => {
+            const commentCount = market.commentCount || market.events?.[0]?.commentCount || 0;
+            return commentCount > 0;
+        });
+
+        console.log(`Successfully fetched ${marketsWithComments.length} markets with comments (from ${response.data.length} total)`);
 
         res.json({
             success: true,
-            data: response.data,
-            count: response.data.length
+            data: marketsWithComments.slice(0, parseInt(req.query.limit) || 20),
+            count: marketsWithComments.length
         });
 
     } catch (error) {
