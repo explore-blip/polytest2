@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Comment Analyzer - AI-Powered Market Intelligence</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Configuration Notice -->
+    <div id="configNotice" class="config-notice">
+        <div class="config-notice-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Backend API URL not configured. Click <button id="openSettingsBtn" class="config-link">Settings</button> to configure.</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <div class="logo-section">
+                <i class="fas fa-chart-line"></i>
+                <h1>Polymarket Analyzer</h1>
+            </div>
+            <div class="header-actions">
+                <button id="settingsBtn" class="icon-btn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-content">
+                <h2 class="hero-title">Read <span class="highlight">18,000 comments</span> in <span class="highlight">10 seconds</span></h2>
+                <p class="hero-subtitle">Powered by Polymarket + Claude AI + Real-Time Analysis</p>
+                <div class="feature-tags">
+                    <span class="tag"><i class="fas fa-brain"></i> AI Sentiment Analysis</span>
+                    <span class="tag"><i class="fas fa-filter"></i> Smart Filtering</span>
+                    <span class="tag"><i class="fas fa-users"></i> Holder Tracking</span>
+                    <span class="tag"><i class="fas fa-chart-bar"></i> Divergence Detection</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Input Section -->
+        <section class="input-section">
+            <div class="input-card">
+                <h3>Analyze Market Comments</h3>
+                <form id="analyzeForm">
+                    <div class="form-group">
+                        <label for="marketId">
+                            <i class="fas fa-link"></i> Market ID or Slug
+                        </label>
+                        <input 
+                            type="text" 
+                            id="marketId" 
+                            placeholder="e.g., will-trump-win-2024 or market ID"
+                            required
+                        />
+                        <small class="form-help">Enter a Polymarket market ID or slug from the URL</small>
+                    </div>
+
+                    <div class="options-grid">
+                        <div class="option-card">
+                            <input type="checkbox" id="filterHolders" checked>
+                            <label for="filterHolders">
+                                <i class="fas fa-wallet"></i>
+                                <span>Filter Position Holders</span>
+                                <small>Only analyze comments from traders with positions</small>
+                            </label>
+                        </div>
+
+                        <div class="option-card">
+                            <input type="checkbox" id="analyzeSentiment" checked>
+                            <label for="analyzeSentiment">
+                                <i class="fas fa-smile"></i>
+                                <span>Sentiment Analysis</span>
+                                <small>Classify bullish, bearish, or neutral sentiment</small>
+                            </label>
+                        </div>
+
+                        <div class="option-card">
+                            <input type="checkbox" id="detectDivergence" checked>
+                            <label for="detectDivergence">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Divergence Detection</span>
+                                <small>Flag when holders disagree with the crowd</small>
+                            </label>
+                        </div>
+
+                        <div class="option-card">
+                            <input type="checkbox" id="findInsiders" checked>
+                            <label for="findInsiders">
+                                <i class="fas fa-user-secret"></i>
+                                <span>Find Alpha Signals</span>
+                                <small>Extract insider mentions and unique insights</small>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="analyze-btn" id="analyzeBtn">
+                        <i class="fas fa-rocket"></i>
+                        <span>Analyze Comments</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Loading Section -->
+        <section class="loading-section" id="loadingSection" style="display: none;">
+            <div class="loading-card">
+                <div class="loading-spinner"></div>
+                <h3 id="loadingTitle">Initializing Analysis...</h3>
+                <p id="loadingMessage">Preparing to fetch market data</p>
+                <div class="progress-steps">
+                    <div class="step" data-step="1">
+                        <div class="step-icon"><i class="fas fa-download"></i></div>
+                        <div class="step-label">Fetching Comments</div>
+                    </div>
+                    <div class="step" data-step="2">
+                        <div class="step-icon"><i class="fas fa-filter"></i></div>
+                        <div class="step-label">Filtering Data</div>
+                    </div>
+                    <div class="step" data-step="3">
+                        <div class="step-icon"><i class="fas fa-brain"></i></div>
+                        <div class="step-label">AI Analysis</div>
+                    </div>
+                    <div class="step" data-step="4">
+                        <div class="step-icon"><i class="fas fa-chart-line"></i></div>
+                        <div class="step-label">Generating Insights</div>
+                    </div>
+                    <div class="step" data-step="5">
+                        <div class="step-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="step-label">Complete</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-header">
+                <h2>Analysis Results</h2>
+                <button id="resetBtn" class="secondary-btn">
+                    <i class="fas fa-redo"></i> New Analysis
+                </button>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="summary-grid" id="summaryGrid"></div>
+
+            <!-- Chart -->
+            <div class="chart-card">
+                <h3>Sentiment Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Key Insights -->
+            <div class="insights-card" id="insightsCard"></div>
+
+            <!-- Divergence Alerts -->
+            <div class="alerts-card" id="alertsCard"></div>
+
+            <!-- Top Comments -->
+            <div class="comments-card" id="commentsCard"></div>
+
+            <!-- Insider Mentions -->
+            <div class="insiders-card" id="insidersCard"></div>
+        </section>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> Backend Configuration</h2>
+                <button class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="backendUrl">
+                        <i class="fas fa-server"></i> Backend API URL
+                    </label>
+                    <input 
+                        type="text" 
+                        id="backendUrl" 
+                        placeholder="https://your-backend.railway.app"
+                    />
+                    <small class="form-help">Enter your deployed backend API URL (without trailing slash)</small>
+                </div>
+                <div class="settings-actions">
+                    <button id="saveSettingsBtn" class="primary-btn">
+                        <i class="fas fa-save"></i> Save Configuration
+                    </button>
+                    <button id="testConnectionBtn" class="secondary-btn">
+                        <i class="fas fa-plug"></i> Test Connection
+                    </button>
+                </div>
+                <div id="connectionStatus" class="connection-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
