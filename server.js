@@ -33,10 +33,44 @@ app.get('/health', (req, res) => {
  */
 app.get('/api/polymarket/comments/:marketId', async (req, res) => {
     try {
-        const { marketId } = req.params;
+        let { marketId } = req.params;
         const { limit = 100, offset = 0 } = req.query;
 
         console.log(`Fetching comments for market: ${marketId}`);
+
+        // If marketId is a slug (not hex), fetch market details first to get condition ID
+        if (!marketId.startsWith('0x')) {
+            console.log(`Converting slug to condition ID: ${marketId}`);
+            
+            try {
+                const marketResponse = await axios.get(`https://gamma-api.polymarket.com/markets`, {
+                    params: {
+                        slug: marketId,
+                        closed: false
+                    },
+                    headers: {
+                        'Accept': 'application/json',
+                        'User-Agent': 'PolymarketAnalyzer/1.0'
+                    },
+                    timeout: 10000
+                });
+
+                if (marketResponse.data && marketResponse.data.length > 0) {
+                    marketId = marketResponse.data[0].conditionId;
+                    console.log(`Resolved to condition ID: ${marketId}`);
+                } else {
+                    throw new Error('Market not found');
+                }
+            } catch (lookupError) {
+                console.error('Market lookup failed:', lookupError.message);
+                return res.status(404).json({
+                    success: false,
+                    error: 'Market not found',
+                    message: 'Could not find market with that slug. Please check the market ID.',
+                    originalSlug: req.params.marketId
+                });
+            }
+        }
 
         // Polymarket Comments API endpoint
         const response = await axios.get(`https://gamma-api.polymarket.com/comments`, {
@@ -68,6 +102,48 @@ app.get('/api/polymarket/comments/:marketId', async (req, res) => {
             error: 'Failed to fetch comments from Polymarket',
             message: error.message,
             details: error.response?.data || null
+        });
+    }
+});
+
+/**
+ * GET /api/polymarket/markets
+ * Fetch list of active markets
+ */
+app.get('/api/polymarket/markets', async (req, res) => {
+    try {
+        const { limit = 20, offset = 0 } = req.query;
+
+        console.log(`Fetching markets list (limit: ${limit})`);
+
+        const response = await axios.get('https://gamma-api.polymarket.com/markets', {
+            params: {
+                limit: limit,
+                offset: offset,
+                closed: false,
+                active: true
+            },
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'PolymarketAnalyzer/1.0'
+            },
+            timeout: 10000
+        });
+
+        console.log(`Successfully fetched ${response.data.length} markets`);
+
+        res.json({
+            success: true,
+            data: response.data,
+            count: response.data.length
+        });
+
+    } catch (error) {
+        console.error('Polymarket Markets API Error:', error.message);
+        res.status(error.response?.status || 500).json({
+            success: false,
+            error: 'Failed to fetch markets',
+            message: error.message
         });
     }
 });
@@ -361,6 +437,7 @@ app.use((req, res) => {
         error: 'Endpoint not found',
         availableEndpoints: [
             'GET /health',
+            'GET /api/polymarket/markets',
             'GET /api/polymarket/comments/:marketId',
             'GET /api/polymarket/market/:marketId',
             'POST /api/analyze/comments'

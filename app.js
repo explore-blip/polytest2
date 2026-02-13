@@ -24,6 +24,14 @@ const elements = {
     testConnectionBtn: document.getElementById('testConnectionBtn'),
     connectionStatus: document.getElementById('connectionStatus'),
     
+    // Markets browser
+    browseMarketsBtn: document.getElementById('browseMarketsBtn'),
+    marketsModal: document.getElementById('marketsModal'),
+    closeMarketsModalBtn: document.getElementById('closeMarketsModalBtn'),
+    marketsLoading: document.getElementById('marketsLoading'),
+    marketsList: document.getElementById('marketsList'),
+    marketsError: document.getElementById('marketsError'),
+    
     // Form
     analyzeForm: document.getElementById('analyzeForm'),
     marketIdInput: document.getElementById('marketId'),
@@ -83,6 +91,15 @@ function attachEventListeners() {
     elements.settingsModal.addEventListener('click', (e) => {
         if (e.target === elements.settingsModal) {
             closeSettingsModal();
+        }
+    });
+    
+    // Markets browser
+    elements.browseMarketsBtn.addEventListener('click', openMarketsModal);
+    elements.closeMarketsModalBtn.addEventListener('click', closeMarketsModal);
+    elements.marketsModal.addEventListener('click', (e) => {
+        if (e.target === elements.marketsModal) {
+            closeMarketsModal();
         }
     });
     
@@ -153,6 +170,104 @@ function showConnectionStatus(message, type) {
     elements.connectionStatus.textContent = message;
     elements.connectionStatus.className = `connection-status ${type}`;
     elements.connectionStatus.style.display = 'block';
+}
+
+// ============================================
+// MARKETS BROWSER
+// ============================================
+async function openMarketsModal() {
+    if (!state.backendUrl) {
+        alert('⚠️ Please configure your backend URL in Settings first!');
+        openSettingsModal();
+        return;
+    }
+    
+    elements.marketsModal.classList.add('show');
+    elements.marketsLoading.style.display = 'block';
+    elements.marketsList.style.display = 'none';
+    elements.marketsError.style.display = 'none';
+    
+    await loadMarkets();
+}
+
+function closeMarketsModal() {
+    elements.marketsModal.classList.remove('show');
+}
+
+async function loadMarkets() {
+    try {
+        const response = await fetch(`${state.backendUrl}/api/polymarket/markets?limit=50`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to fetch markets');
+        }
+        
+        displayMarkets(data.data);
+        
+    } catch (error) {
+        console.error('Markets loading error:', error);
+        elements.marketsLoading.style.display = 'none';
+        elements.marketsError.style.display = 'block';
+        elements.marketsError.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>Failed to load markets: ${error.message}</p>
+            <button onclick="loadMarkets()" class="secondary-btn" style="margin-top: 16px;">
+                <i class="fas fa-redo"></i> Try Again
+            </button>
+        `;
+    }
+}
+
+function displayMarkets(markets) {
+    elements.marketsLoading.style.display = 'none';
+    elements.marketsList.style.display = 'block';
+    
+    if (!markets || markets.length === 0) {
+        elements.marketsList.innerHTML = '<p style="text-align: center; padding: 40px; color: var(--text-muted);">No active markets found.</p>';
+        return;
+    }
+    
+    elements.marketsList.innerHTML = markets.map(market => {
+        const volume = market.volume ? `$${(parseFloat(market.volume) / 1000000).toFixed(1)}M` : 'N/A';
+        const endDate = market.endDate ? new Date(market.endDate).toLocaleDateString() : 'TBD';
+        const commentCount = market.commentCount || 0;
+        
+        return `
+            <div class="market-item" data-market-id="${market.conditionId}" data-market-slug="${market.slug || market.conditionId}">
+                <div class="market-item-header">
+                    <div class="market-item-title">${market.question || market.title || 'Untitled Market'}</div>
+                    <div class="market-item-volume">${volume}</div>
+                </div>
+                <div class="market-item-meta">
+                    <span><i class="fas fa-comments"></i> ${commentCount} comments</span>
+                    <span><i class="fas fa-calendar"></i> Ends ${endDate}</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Add click handlers
+    document.querySelectorAll('.market-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const marketSlug = item.dataset.marketSlug;
+            selectMarket(marketSlug);
+        });
+    });
+}
+
+function selectMarket(marketSlug) {
+    elements.marketIdInput.value = marketSlug;
+    closeMarketsModal();
+    elements.marketIdInput.focus();
 }
 
 // ============================================

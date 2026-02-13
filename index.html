@@ -56,13 +56,18 @@
                         <label for="marketId">
                             <i class="fas fa-link"></i> Market ID or Slug
                         </label>
-                        <input 
-                            type="text" 
-                            id="marketId" 
-                            placeholder="e.g., will-trump-win-2024 or market ID"
-                            required
-                        />
-                        <small class="form-help">Enter a Polymarket market ID or slug from the URL</small>
+                        <div class="input-with-button">
+                            <input 
+                                type="text" 
+                                id="marketId" 
+                                placeholder="e.g., will-trump-win-2024 or market ID"
+                                required
+                            />
+                            <button type="button" id="browseMarketsBtn" class="browse-btn">
+                                <i class="fas fa-list"></i> Browse Markets
+                            </button>
+                        </div>
+                        <small class="form-help">Enter a Polymarket market ID or browse popular markets</small>
                     </div>
 
                     <div class="options-grid">
@@ -204,6 +209,24 @@
                     </button>
                 </div>
                 <div id="connectionStatus" class="connection-status"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Markets Browser Modal -->
+    <div id="marketsModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fas fa-list"></i> Browse Polymarket Markets</h2>
+                <button class="close-btn" id="closeMarketsModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="marketsLoading" class="markets-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading markets...</p>
+                </div>
+                <div id="marketsList" class="markets-list" style="display: none;"></div>
+                <div id="marketsError" class="markets-error" style="display: none;"></div>
             </div>
         </div>
     </div>
